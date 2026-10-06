@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { X, User, Briefcase, UploadCloud, PenTool, Trash2 } from "lucide-react";
 const PROVINCE_DISTRICTS = {
   "ນະຄອນຫຼວງວຽງຈັນ": ["ຈັນທະບູລີ", "ສີສັດຕະນາກ", "ໄຊເສດຖາ", "ນາຊາຍທອງ", "ໄຊທານີ", "ຫາດຊາຍຟອງ", "ສັງທອງ", "ປາກງື່ມ", "ໝາກແຂ້ງ"],
