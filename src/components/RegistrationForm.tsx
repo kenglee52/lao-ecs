@@ -1,6 +1,12 @@
 import { useRef, useState } from "react";
+import type {
+  ChangeEvent,
+  MouseEvent as ReactMouseEvent,
+  TouchEvent as ReactTouchEvent,
+} from "react";
 import { X, User, Briefcase, UploadCloud, PenTool, Trash2 } from "lucide-react";
-const PROVINCE_DISTRICTS = {
+
+const PROVINCE_DISTRICTS: Record<string, string[]> = {
   "ນະຄອນຫຼວງວຽງຈັນ": ["ຈັນທະບູລີ", "ສີສັດຕະນາກ", "ໄຊເສດຖາ", "ນາຊາຍທອງ", "ໄຊທານີ", "ຫາດຊາຍຟອງ", "ສັງທອງ", "ປາກງື່ມ", "ໝາກແຂ້ງ"],
   "ຜົ້ງສາລີ": ["ຜົ້ງສາລີ", "ຍອດອູ", "ບຸນເໜືອ", "ບຸນໃຕ້", "ນາໝໍ້", "ຂວາ", "ມະໄຊ"],
   "ຫລວງນ້ຳທາ": ["ໜາມທາ", "ສິງ", "ລອງ", "ວຽງພູຄາ", "ນາແລ"],
@@ -23,10 +29,24 @@ const PROVINCE_DISTRICTS = {
 
 const PROVINCES = Object.keys(PROVINCE_DISTRICTS);
 
-function AddressBlock({ title, address, onChange }) {
+interface Address {
+  province: string;
+  district: string;
+  village: string;
+}
+
+type SignatureMethod = "upload" | "digital";
+
+interface AddressBlockProps {
+  title: string;
+  address: Address;
+  onChange: (address: Address) => void;
+}
+
+function AddressBlock({ title, address, onChange }: AddressBlockProps) {
   const districts = address.province ? PROVINCE_DISTRICTS[address.province] || [] : [];
 
-  const handleProvinceChange = (e) => {
+  const handleProvinceChange = (e: ChangeEvent<HTMLSelectElement>) => {
     onChange({ ...address, province: e.target.value, district: "" });
   };
 
@@ -49,7 +69,7 @@ function AddressBlock({ title, address, onChange }) {
         <div>
           <select
             value={address.district}
-            onChange={(e) => onChange({ ...address, district: e.target.value })}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) => onChange({ ...address, district: e.target.value })}
             disabled={!address.province}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none bg-white disabled:bg-gray-100 disabled:text-gray-400"
           >
@@ -63,7 +83,7 @@ function AddressBlock({ title, address, onChange }) {
           type="text"
           placeholder="ບ້ານ"
           value={address.village}
-          onChange={(e) => onChange({ ...address, village: e.target.value })}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange({ ...address, village: e.target.value })}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none"
         />
       </div>
@@ -71,40 +91,54 @@ function AddressBlock({ title, address, onChange }) {
   );
 }
 
-function SignatureCanvas({ savedSignature, onSave, onCancel }) {
-  const canvasRef = useRef(null);
+interface SignatureCanvasProps {
+  savedSignature: string | null;
+  onSave: (dataUrl: string) => void;
+  onCancel: () => void;
+}
+
+type CanvasPointerEvent =
+  | ReactMouseEvent<HTMLCanvasElement>
+  | ReactTouchEvent<HTMLCanvasElement>;
+
+function SignatureCanvas({ savedSignature, onSave, onCancel }: SignatureCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
   const [hasDrawing, setHasDrawing] = useState(false);
 
-  const getPos = (e) => {
+  const getCtx = () => canvasRef.current?.getContext("2d") ?? null;
+
+  const getPos = (e: CanvasPointerEvent) => {
     const canvas = canvasRef.current;
+    if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const point = "touches" in e ? e.touches[0] : e;
     return {
-      x: ((clientX - rect.left) / rect.width) * canvas.width,
-      y: ((clientY - rect.top) / rect.height) * canvas.height,
+      x: ((point.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((point.clientY - rect.top) / rect.height) * canvas.height,
     };
   };
 
-  const startDraw = (e) => {
+  const startDraw = (e: CanvasPointerEvent) => {
     e.preventDefault();
-    const ctx = canvasRef.current.getContext("2d");
-    const { x, y } = getPos(e);
+    const ctx = getCtx();
+    const pos = getPos(e);
+    if (!ctx || !pos) return;
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(pos.x, pos.y);
     isDrawing.current = true;
   };
 
-  const draw = (e) => {
+  const draw = (e: CanvasPointerEvent) => {
     if (!isDrawing.current) return;
     e.preventDefault();
-    const ctx = canvasRef.current.getContext("2d");
-    const { x, y } = getPos(e);
+    const ctx = getCtx();
+    const pos = getPos(e);
+    if (!ctx || !pos) return;
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.strokeStyle = "#0c4a6e";
-    ctx.lineTo(x, y);
+    ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
     setHasDrawing(true);
   };
@@ -115,15 +149,16 @@ function SignatureCanvas({ savedSignature, onSave, onCancel }) {
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
+    const ctx = getCtx();
+    if (!canvas || !ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasDrawing(false);
   };
 
   const handleSave = () => {
-    if (!hasDrawing) return;
-    const dataUrl = canvasRef.current.toDataURL("image/png");
-    onSave(dataUrl);
+    const canvas = canvasRef.current;
+    if (!hasDrawing || !canvas) return;
+    onSave(canvas.toDataURL("image/png"));
   };
 
   // ຖ້າບັນທຶກລາຍເຊັນແລ້ວ, ສະແດງຮູບແທນ ພ້ອມປຸ່ມຍົກເລີກ
@@ -190,14 +225,18 @@ function SignatureCanvas({ savedSignature, onSave, onCancel }) {
   );
 }
 
-function RegistrationForm({ onClose }) {
-  const [censusAddress, setCensusAddress] = useState({ province: "", district: "", village: "" });
-  const [currentAddress, setCurrentAddress] = useState({ province: "", district: "", village: "" });
+interface RegistrationFormProps {
+  onClose: () => void;
+}
 
-  const [signatureMethod, setSignatureMethod] = useState("upload"); // "upload" | "digital"
-  const [savedSignature, setSavedSignature] = useState(null);
+function RegistrationForm({ onClose }: RegistrationFormProps) {
+  const [censusAddress, setCensusAddress] = useState<Address>({ province: "", district: "", village: "" });
+  const [currentAddress, setCurrentAddress] = useState<Address>({ province: "", district: "", village: "" });
 
-  const handleSignatureMethodChange = (method) => {
+  const [signatureMethod, setSignatureMethod] = useState<SignatureMethod>("upload");
+  const [savedSignature, setSavedSignature] = useState<string | null>(null);
+
+  const handleSignatureMethodChange = (method: SignatureMethod) => {
     setSignatureMethod(method);
     setSavedSignature(null); // ປ່ຽນວິທີແລ້ວລ້າງລາຍເຊັນທີ່ບັນທຶກໄວ້
   };
