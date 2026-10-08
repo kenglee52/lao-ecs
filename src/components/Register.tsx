@@ -4,7 +4,6 @@ import RegistrationForm from "./RegistrationForm";
 
 function Register() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-
   return (
     <div id="register" className="bg-gray-50 p-4 md:p-8">
       <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-lg border-2 border-gray-100 p-6 md:p-10">

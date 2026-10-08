@@ -1,5 +1,4 @@
 import ImagePoster from "../assets/images/poster.png";
-
 function Home() {
   return (
     <section className="min-h-[60vh] bg-gradient-to-br from-sky-800 to-sky-950 w-full relative pb-32 pt-16 flex flex-col md:flex-row items-center justify-evenly">
@@ -12,7 +11,7 @@ function Home() {
           ເຂົ້າມາເລືອກຕະຫຼາດ ແລະ ສິນຄ້າຂອງທ່ານໄດ້ທີ່ນີ້ເລີຍ ທີ່ດຽວຄົບທຸກຢ່າງ
         </p>
         <div className="flex gap-3">
-          <button className="cursor-pointer rounded-xl p-3 bg-yellow-600 font-bold text-white hover:bg-amber-700 hover:scale-95 transform transition">
+          <button onClick={()=>window.location.href = "#download"} className="cursor-pointer rounded-xl p-3 bg-yellow-600 font-bold text-white hover:bg-amber-700 hover:scale-95 transform transition">
             ດາວໂຫລດແອັບຕອນນີ້
           </button>
         </div>
